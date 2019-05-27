@@ -42,7 +42,7 @@ public class ReviewHelper {
 	// String clientId, String clientSecret, String audience, String m2mAuthDomain
 	public static String getToken() throws Exception {
 		Properties props = loadPropertyFile();
-
+		
 		JWTTokenGenerator jwtTokenGenerator = JWTTokenGenerator.getInstance(props.getProperty("clientId"),
 				props.getProperty("clientSecret"), props.getProperty("audience"), props.getProperty("m2mAuthDomain"),
 				30, null);

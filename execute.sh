@@ -10,6 +10,4 @@ chmod +x /workdir/solution.sh
 
 command=`cat /workdir/command.txt`
 
-rm $tempFile
-
 java -jar /tester/target/ReviewTest-0.0.1-SNAPSHOT.jar $challengeId $testPhase $submissionId "$command"

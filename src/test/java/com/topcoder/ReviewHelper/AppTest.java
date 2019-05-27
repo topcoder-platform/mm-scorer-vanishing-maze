@@ -1,4 +1,4 @@
-package com.topcoder.fetchReviews;
+package com.topcoder.ReviewHelper;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -14,7 +14,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import com.topcoder.ReviewHelper.ReviewHelper;
+import com.topcoder.ReviewHelper.*;
 
 /**
  * Unit test for simple App.
@@ -45,11 +45,11 @@ public class AppTest
 	 */
 	public void testApp()
 	{
-		String submissionId = "523f2f22-695c-4e45-832c-597cf712bbac";
-		String reviewerId = "da5876e2-58c9-40e5-862e-f8016041c160";
-		String typeId = "68c5a381-c8ab-48af-92a7-7a869a4ee6c3";
-		String scoreCardId = "30001850";
-		String challengeId = "30055011";
+		String submissionId = "4a7564f3-ed3d-420d-b084-fe6ab67337c8";
+		String reviewerId = "3ba1e475-b870-43ee-a64d-ae9365eda888";
+		String typeId = "48c4296e-5d4a-4797-80b7-1c22f36ba698";
+		String scoreCardId = "30001852";
+		String challengeId = "30091712";
 		String testPhase = "provisional";
 		List<Map<String,Object>> testScores = new ArrayList();
 		HashMap<String,Object> testScore = new HashMap<String,Object>();
@@ -61,10 +61,8 @@ public class AppTest
 		testScore.put("testcase",2);
 		testScores.add(testScore);
 
-		ReviewHelper reviewHelper = new ReviewHelper();
-
 		try {
-			String res = reviewHelper.postReview(
+			String res = ReviewHelper.postReview(
 				challengeId,
 				testPhase,
 				submissionId,
