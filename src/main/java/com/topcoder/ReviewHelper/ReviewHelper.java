@@ -106,10 +106,6 @@ public class ReviewHelper {
 				JSONArray reviewArray = (JSONArray) jsonSub.get("review");
 				Long memberId = (Long) jsonSub.get("memberId");
 
-				if (!memberReviews.containsKey(memberId)) {
-					memberReviews.put(memberId, new JSONArray());
-				}
-
 				JSONArray tempJSONArray = new JSONArray();
 
 				for (Object review : reviewArray) {
