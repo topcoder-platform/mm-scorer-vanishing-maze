@@ -115,13 +115,16 @@ public class ReviewHelper {
 				for (Object review : reviewArray) {
 					JSONObject jsonReview = (JSONObject) review;
 					if (!jsonReview.get("typeId").equals(props.getProperty("avScanTypeId"))) {
-						tempJSONArray = (JSONArray) memberReviews.get(memberId);
 						tempJSONArray.add(review);
 					}
 
 				}
 
 				if (tempJSONArray.size() > 0) {
+					if (!memberReviews.containsKey(memberId)) {
+						memberReviews.put(memberId, new JSONArray());
+					}
+					
 					memberReviews.put(memberId, tempJSONArray);
 				}
 			}
