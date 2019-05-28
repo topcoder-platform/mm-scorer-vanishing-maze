@@ -32,7 +32,7 @@ public class ReviewHelper {
 
 	private static Properties loadPropertyFile() throws Exception {
 		Properties props = new Properties();
-		FileInputStream in = new FileInputStream("toekn.properties");
+		FileInputStream in = new FileInputStream("token.properties");
 		props.load(in);
 		in.close();
 
