@@ -32,7 +32,7 @@ public class ReviewHelper {
 
 	private static Properties loadPropertyFile() throws Exception {
 		Properties props = new Properties();
-		FileInputStream in = new FileInputStream("token.properties");
+		FileInputStream in = new FileInputStream("toekn.properties");
 		props.load(in);
 		in.close();
 
@@ -42,7 +42,7 @@ public class ReviewHelper {
 	// String clientId, String clientSecret, String audience, String m2mAuthDomain
 	public static String getToken() throws Exception {
 		Properties props = loadPropertyFile();
-		
+
 		JWTTokenGenerator jwtTokenGenerator = JWTTokenGenerator.getInstance(props.getProperty("clientId"),
 				props.getProperty("clientSecret"), props.getProperty("audience"), props.getProperty("m2mAuthDomain"),
 				30, null);
@@ -118,9 +118,8 @@ public class ReviewHelper {
 
 				if (tempJSONArray.size() > 0) {
 					if (!memberReviews.containsKey(memberId)) {
-						memberReviews.put(memberId, new JSONArray());
-					}
-					
+					memberReviews.put(memberId, new JSONArray());
+				}
 					memberReviews.put(memberId, tempJSONArray);
 				}
 			}
@@ -136,6 +135,7 @@ public class ReviewHelper {
 		return reviews;
 	}
 
+	// convert List<Map> to JSONArray
 	public static JSONArray list2JSON(List<Map<String,Object>> list) {
 		JSONArray res = new JSONArray();
 		for(int i = 0; i < list.size(); i++) {
@@ -146,6 +146,112 @@ public class ReviewHelper {
 			res.add(obj);
 		}
 		return res;
+	}
+
+	// calc Max Scores for each test case
+	public static Map<String,Double> calcMaxScores(
+			List<Map<String,Object>> testScores,
+			JSONArray reviews
+		) {
+		Map<String,Double> maxScores = new HashMap<String,Double>();
+
+		// Init Max Scores
+		for (Map<String,Object> scoreObj : testScores) {
+			String testcase = scoreObj.get("testcase").toString();
+			Double scoreCase = Double.parseDouble(scoreObj.get("score").toString());
+			Double maxScore = maxScores.get(testcase);
+			maxScores.put(testcase,scoreCase);
+		}
+
+		// Calc Max Scores for each test case
+		for (Object obj : reviews) {
+			JSONObject reviewObj = (JSONObject) obj;
+			reviewObj = (JSONObject) reviewObj.get("metadata");
+			if( null == reviewObj ) continue;
+			JSONArray scoObjs = (JSONArray) reviewObj.get("testScores");
+			if( null == scoObjs ) continue;
+
+			for (Object scoObj : scoObjs) {
+				JSONObject scoreObj = (JSONObject) scoObj;
+				String testcase = scoreObj.get("testcase").toString();
+				Double scoreCase = Double.parseDouble(scoreObj.get("score").toString());
+				Double maxScore = maxScores.get(testcase);
+				if(maxScore == null || maxScore < scoreCase) {
+					maxScores.put(testcase,scoreCase);
+				}
+			}
+		}
+
+		return maxScores;
+	}
+
+	// make a put review 
+	public static JSONObject getPutReview(
+			String testPhase,
+			Map<String,Double> maxScores,
+			JSONObject reviewObj
+		) {
+		if( null == reviewObj ) return null;
+
+		// Make metadata
+		JSONObject metadata = (JSONObject) reviewObj.get("metadata");
+		if( null == metadata ) metadata = new JSONObject();
+
+		metadata.put("testType",testPhase);
+
+		// update relativeScores
+		JSONArray scoObjs = null;
+		scoObjs = (JSONArray) metadata.get("testScores");
+
+		double score = 0.0;
+		int tot = 0;
+
+		if( null != scoObjs ) {
+			// Calc Relative Scores
+			JSONArray relativeScoreArr = new JSONArray();
+			for (Object obj : scoObjs) {
+				JSONObject scoreObj = (JSONObject) obj;
+				String testcase  = scoreObj.get("testcase").toString();
+				Double scoreCase = Double.parseDouble(scoreObj.get("score").toString());
+				Double maxScore  = maxScores.get(testcase);
+
+				if ( null == maxScore ) {
+					scoreCase = 1.0;
+				} else if( 0.0 == maxScore ) {
+					if( 0.0 < scoreCase ) {
+						scoreCase = 1.0;
+					} else {
+						scoreCase = 0.0;
+					}
+				} else {
+					scoreCase = scoreCase/maxScore;
+				}
+
+				scoreCase *= 100.0;
+				score += scoreCase;
+				tot ++;
+
+				JSONObject relativeScoreObj = new JSONObject();
+				relativeScoreObj.put("testcase",testcase);
+				relativeScoreObj.put("score",scoreCase);
+				relativeScoreArr.add(relativeScoreObj);
+			}
+			metadata.put("relativeScores",relativeScoreArr);
+		}
+
+		if(tot>0) score /= tot;
+
+		// Make reviewJSON
+		JSONObject reviewJSON = new JSONObject();
+		reviewJSON.put("submissionId",reviewObj.get("submissionId"));
+		reviewJSON.put("reviewerId",reviewObj.get("reviewerId"));
+		reviewJSON.put("typeId",reviewObj.get("typeId"));
+		reviewJSON.put("scoreCardId",reviewObj.get("scoreCardId"));
+
+		reviewJSON.put("score",score);
+		reviewJSON.put("metadata",metadata);
+
+		return reviewJSON;
 	}
 
 	public static String postReview(
@@ -165,76 +271,38 @@ public class ReviewHelper {
 	
 			// Get Reviews
 			JSONArray reviews = getReviews(challengeId, token);
+			
 			System.out.println("getReviews:");
 			System.out.println(reviews);
 
-			// Calc Max Scores for each test case
-			Map<String,Double> maxScores = new HashMap<String,Double>();
-
-			for (Object obj : reviews) {
-				JSONObject reviewObj = (JSONObject) obj;
-				reviewObj = (JSONObject) reviewObj.get("metadata");
-				if( null == reviewObj ) continue;
-				JSONArray scoObjs = (JSONArray) reviewObj.get("testScores");
-				if( null == scoObjs ) continue;
-
-				for (Object scoObj : scoObjs) {
-					JSONObject scoreObj = (JSONObject) scoObj;
-					String testcase = scoreObj.get("testcase").toString();
-					Double scoreCase = Double.parseDouble(scoreObj.get("score").toString());
-					Double maxScore = maxScores.get(testcase);
-					if(maxScore == null || maxScore < scoreCase) {
-						maxScores.put(testcase,scoreCase);
-					}
-				}
-			}
-
+			// Make metadata
 			JSONObject metadata = new JSONObject();
 			metadata.put("testType",testPhase);
 			metadata.put("testScores",list2JSON(testScores));
 
-			double score = 0.0;
-			int tot = 0;
-			// Calc Relative Scores
-			for (Map<String,Object> scoreObj : testScores) {
-				String testcase  = scoreObj.get("testcase").toString();
-				Double scoreCase = Double.parseDouble(scoreObj.get("score").toString());
-				Double maxScore  = maxScores.get(testcase);
-				if ( null == maxScore ) {
-					scoreCase = 1.0;
-				} else if( 0.0 == maxScore ) {
-					if( 0.0 < scoreCase ) {
-						scoreCase = 1.0;
-					} else {
-						scoreCase = 0.0;
-					}
-				} else {
-					scoreCase = scoreCase/maxScore;
-				}
-				scoreCase *= 100.0;
-				score += scoreCase;
-				tot ++;
-				scoreObj.put("score",scoreCase);
-			}
-
-			if(tot>0) score /= tot;
-
-			// add relativeScores
-			metadata.put("relativeScores",list2JSON(testScores));
-
+			// Make reviewJSON
 			JSONObject reviewJSON = new JSONObject();
 			reviewJSON.put("submissionId",submissionId);
 			reviewJSON.put("reviewerId",reviewerId);
 			reviewJSON.put("typeId",typeId);
-			reviewJSON.put("score",score);
 			reviewJSON.put("scoreCardId",scoreCardId);
 			reviewJSON.put("metadata",metadata);
 
+			reviews.add(reviewJSON);
 
-			System.out.println("generate reviewJSON:");
-			System.out.println(reviewJSON);
+			// Max Scores
+			Map<String,Double> maxScores = calcMaxScores(testScores,reviews);
 
-			postResult = generateReview(reviewJSON, "provisional", token);
+			// Update scoreboard
+			for (Object obj : reviews) {
+				JSONObject reviewObj = (JSONObject) obj;
+				reviewObj = getPutReview(testPhase,maxScores,reviewObj);
+				System.out.println("generate reviewJSON:");
+				System.out.println(reviewObj);
+
+				postResult = generateReview(reviewObj, testPhase, token);
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
