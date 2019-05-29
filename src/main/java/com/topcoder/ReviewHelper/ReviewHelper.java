@@ -3,6 +3,7 @@ package com.topcoder.ReviewHelper;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.util.Properties;
 import java.util.Map;
 import java.util.HashMap;
@@ -292,6 +293,7 @@ public class ReviewHelper {
 
 			// Max Scores
 			Map<String,Double> maxScores = calcMaxScores(testScores,reviews);
+			JSONArray reviewsForUpdate = new JSONArray();
 
 			// Update scoreboard
 			for (Object obj : reviews) {
@@ -300,8 +302,14 @@ public class ReviewHelper {
 				System.out.println("generate reviewJSON:");
 				System.out.println(reviewObj);
 
-				postResult = generateReview(reviewObj, testPhase, token);
+				reviewsForUpdate.add(reviewObj);
+
+				// postResult = generateReview(reviewObj, testPhase, token);
 			}
+
+			FileWriter file = new FileWriter("/workdir/output/reviews.json");
+			file.write(reviewsForUpdate.toJSONString());
+			file.flush();
 
 		} catch (Exception e) {
 			e.printStackTrace();
